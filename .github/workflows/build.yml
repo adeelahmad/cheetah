@@ -24,7 +24,7 @@ jobs:
       - run: |
           cd cheetah
           xcodebuild -scheme Cheetah -configuration Release -destination generic/platform=macOS -derivedDataPath build
-          cd build/Build/Products/Release
+          cd build/Build/Products/Release 
           zip -r Cheetah.zip Cheetah.app
       - uses: actions/upload-artifact@v3
         with:
