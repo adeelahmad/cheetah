@@ -1,9 +1,5 @@
 name: Build
-on:
-  workflow_call:
-  pull_request:
-    branches:
-      - main
+
 jobs:
   arm64_ventura:
     runs-on: macos-13
