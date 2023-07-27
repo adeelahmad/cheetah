@@ -1,31 +1,59 @@
 name: Build
+
 on:
   push:
     branches:
       - main
+
 jobs:
-  arm64_ventura:
-    runs-on: macos-13
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]  # Add other operating systems as needed
+        arch: [amd64, arm64]             # Specify AMD and ARM architectures
+
     steps:
-      - run: |
-          brew fetch --force --bottle-tag=arm64_ventura sdl2
-          brew install $(brew --cache --bottle-tag=arm64_ventura sdl2)
-          sudo mkdir -p /opt/homebrew/lib
-          sudo ln -s /usr/local/lib/libSDL2.a /opt/homebrew/lib/libSDL2.a
+      - name: Setup Homebrew (Only for macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew update
+          brew install sdl2
+          brew link --force sdl2
+
       - uses: actions/checkout@v3
         with:
           path: cheetah
+
       - uses: actions/checkout@v3
         with:
           repository: ggerganov/whisper.cpp
           ref: v1.3.0
           path: whisper.cpp
-      - run: |
+
+      - name: Build Cheetah
+        run: |
           cd cheetah
           xcodebuild -scheme Cheetah -configuration Release -destination generic/platform=macOS -derivedDataPath build
           cd build/Build/Products/Release 
           zip -r Cheetah.zip Cheetah.app
-      - uses: actions/upload-artifact@v3
+
+      - name: Upload Artifact
+        id: upload-artifact
+        uses: actions/upload-artifact@v3
         with:
           name: Cheetah
           path: cheetah/build/Build/Products/Release/Cheetah.zip
+
+      - name: Save Artifact URL
+        run: echo "artifact_url=${{ steps.upload-artifact.outputs.artifact_url }}" >> $GITHUB_ENV
+
+  collect-artifacts:
+    runs-on: ubuntu-latest
+    needs: [build]
+
+    steps:
+      - name: Download Cheetah Artifact
+        run: |
+          artifact_url="${{ needs.build.outputs.artifact_url }}"
+          curl -L -o Cheetah.zip "$artifact_url"
